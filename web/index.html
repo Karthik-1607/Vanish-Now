@@ -1,0 +1,72 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#09111f" />
+    <meta name="description" content="Vanish Now — local browser webcam disappearance effects." />
+    <title>Vanish Now — Browser Webcam Effects</title>
+  </head>
+  <body>
+    <div id="app">
+      <header class="topbar">
+        <a class="brand" href="./" aria-label="Vanish Now home"><span class="brand-mark">V</span><span>Vanish <em>Now</em></span></a>
+        <div class="topbar-note"><span class="status-dot"></span>Local processing · no recording</div>
+      </header>
+
+      <main class="shell">
+        <section class="hero">
+          <div class="eyebrow">BROWSER WEBCAM LAB / 01</div>
+          <h1>Disappear from<br /><span>the frame.</span></h1>
+          <p class="hero-copy">A camera illusion playground that runs in your browser. Capture your room, choose a vanish style, and let the pixels do the trick.</p>
+        </section>
+
+        <section class="studio" aria-label="Vanish Now studio">
+          <div class="preview-card">
+            <div class="preview-head"><span id="cameraState">Camera inactive</span><span id="fpsLabel">Ready</span></div>
+            <div class="stage" id="stage">
+              <video id="video" playsinline muted></video>
+              <canvas id="canvas" aria-label="Live webcam effects preview"></canvas>
+              <div class="stage-empty" id="stageEmpty"><div class="camera-icon">◎</div><strong>Camera feed is off</strong><span>Start the camera to enter the studio.</span></div>
+              <div class="countdown" id="countdown" aria-live="polite"></div>
+            </div>
+            <div class="preview-foot"><span id="backgroundState">Background not captured</span><button class="text-button" id="fullscreenBtn">Enter fullscreen ↗</button></div>
+          </div>
+
+          <aside class="control-panel">
+            <div class="panel-section camera-actions">
+              <button class="primary-button" id="startBtn"><span>Start camera</span><span>↗</span></button>
+              <button class="secondary-button" id="stopBtn" disabled>Stop camera</button>
+            </div>
+            <div class="panel-section">
+              <div class="section-label">Choose your vanish</div>
+              <div class="effect-list" role="radiogroup" aria-label="Choose an effect">
+                <button class="effect-option selected" data-effect="normal" role="radio" aria-checked="true"><span class="effect-index">01</span><span><strong>Normal Vanish</strong><small>Fade into the room</small></span><span class="effect-arrow">→</span></button>
+                <button class="effect-option" data-effect="particles" role="radio" aria-checked="false"><span class="effect-index">02</span><span><strong>Particles</strong><small>Scatter into the air</small></span><span class="effect-arrow">→</span></button>
+                <button class="effect-option" data-effect="naruto" role="radio" aria-checked="false"><span class="effect-index">03</span><span><strong>Substitution</strong><small>Smoke-screen exit</small></span><span class="effect-arrow">→</span></button>
+                <button class="effect-option" data-effect="goku" role="radio" aria-checked="false"><span class="effect-index">04</span><span><strong>Teleport</strong><small>Comic-book energy</small></span><span class="effect-arrow">→</span></button>
+              </div>
+            </div>
+            <div class="panel-section action-grid">
+              <button class="secondary-button" id="captureBtn" disabled>Capture background</button>
+              <button class="accent-button" id="vanishBtn" disabled>Vanish <span>V</span></button>
+              <button class="secondary-button" id="reappearBtn" disabled>Reappear <span>R</span></button>
+            </div>
+            <p class="hint" id="effectHint">Capture a clean background, then press Vanish. For the best result, step out of frame while capturing.</p>
+          </aside>
+        </section>
+
+        <section class="how-it-works">
+          <div><div class="eyebrow">QUICK START / 02</div><h2>Three moves.<br /><span>One illusion.</span></h2></div>
+          <div class="steps"><article><b>01</b><h3>Capture</h3><p>Start the camera and capture the empty room as your background plate.</p></article><article><b>02</b><h3>Choose</h3><p>Pick a style, then press Vanish. The effect stays on your device.</p></article><article><b>03</b><h3>Return</h3><p>Press Reappear whenever you are ready to step back into the scene.</p></article></div>
+        </section>
+
+        <section class="notice"><span class="notice-icon">◌</span><p><strong>Privacy by design.</strong> Your video is processed in this browser tab. It is not uploaded or recorded by Vanish Now. Camera access requires a secure HTTPS connection and your permission.</p></section>
+
+        <details class="limitations"><summary>Compatibility & limitations <span>+</span></summary><div class="details-body"><p>Vanish Now uses standard browser camera APIs and Canvas. Chrome, Edge, Safari, and Firefox work best on a secure HTTPS site. Results depend on steady lighting and a stationary camera. This browser version does not create an OBS or Windows virtual camera output, and it cannot access your camera until you grant permission.</p></div></details>
+      </main>
+      <footer><span>VANISH NOW / 2026</span><span>Built for the browser · made to stay local</span></footer>
+    </div>
+    <script type="module" src="./src/main.js"></script>
+  </body>
+</html>

@@ -72,3 +72,11 @@ To troubleshoot gesture recognition without adding text to the video, pass `--ge
 The [wooden log](assets/substitution_log.png) is an original illustration generated with ImageGen using the supplied image as a visual reference. Smoke is drawn in real time by `naruto_effect.py` so it follows the person's position and scales with the video. We also considered a [CC0 smoke sprite sheet](https://opengameart.org/content/smoke-sprite-sheet), but the procedural animation adapts better to dynamic positioning without an additional asset. No anime frames or assets are included in the project.
 
 Goku mode uses the [MediaPipe BlazeFace short-range model](https://github.com/google-ai-edge/mediapipe/blob/master/mediapipe/tasks/web/vision/README.md) to estimate the forehead position and `hand_landmarker.task` to track the fingers. The teleport's visual trace is drawn in code, without anime frames.
+
+## Browser edition
+
+The browser edition runs locally in a modern HTTPS browser using the camera permission you grant it. It does not upload or record video and does not create a Windows or OBS virtual camera. Once GitHub Pages is enabled, use the live site at:
+
+https://karthik-1607.github.io/Vanish-Now/
+
+The browser source is in [`web/`](web/) and the Pages build is in [`docs/`](docs/).
