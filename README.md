@@ -31,10 +31,10 @@ The published EXE may predate the Particles and Goku modes. To use them now, run
 To start a mode without the menu:
 
 ```powershell
-local_app\AVVIA_LOCALE.bat --mode naruto
-local_app\AVVIA_LOCALE.bat --mode normal
-local_app\AVVIA_LOCALE.bat --mode particles
-local_app\AVVIA_LOCALE.bat --mode goku
+AVVIA_LOCALE.bat --mode naruto
+AVVIA_LOCALE.bat --mode normal
+AVVIA_LOCALE.bat --mode particles
+AVVIA_LOCALE.bat --mode goku
 ```
 
 ## Virtual camera and OBS
@@ -44,7 +44,7 @@ If [OBS Studio](https://obsproject.com/) is installed, the app automatically tri
 To use the effect in an OBS scene, run `AVVIA_OBS.bat`, add a **Window Capture** source, select **Webcam - Anteprima**, and then start the virtual camera from OBS. Alternatively, use [Unity Capture](https://github.com/schellingb/UnityCapture) as a separate virtual video source:
 
 ```powershell
-local_app\AVVIA_VIRTUAL.bat --virtual-backend unitycapture
+AVVIA_VIRTUAL.bat --virtual-backend unitycapture
 ```
 
 OBS has only one virtual camera. Do not use it as both an OBS input and output at the same time. See the [pyvirtualcam documentation](https://github.com/letmaik/pyvirtualcam#supported-virtual-cameras).
@@ -62,7 +62,7 @@ The `V` and `R` keys are disabled in Goku mode.
 You can change the camera, resolution, and maximum virtual-output FPS:
 
 ```powershell
-local_app\AVVIA_LOCALE.bat --camera 1 --width 1280 --height 720 --fps 30
+AVVIA_LOCALE.bat --camera 1 --width 1280 --height 720 --fps 30
 ```
 
 To troubleshoot gesture recognition without adding text to the video, pass `--gesture-debug`. Diagnostic information appears only in the terminal.

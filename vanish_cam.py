@@ -56,6 +56,7 @@ MODEL_URLS = {
 CALIBRATION_SECONDS = 4.0
 BACKGROUND_SAMPLE_SECONDS = 0.55
 VANISH_SECONDS = 3.6
+PARTICLES_SECONDS = 2.2
 GESTURE_INTERVAL_SECONDS = 0.14
 
 
@@ -99,7 +100,7 @@ def parse_args() -> argparse.Namespace:
     )
     parser.add_argument("--virtual-device", help="Nome del dispositivo virtuale da usare")
     parser.add_argument(
-        "--mode", choices=("normal", "naruto"),
+        "--mode", choices=("normal", "particles", "naruto"),
         help="Salta il menu iniziale e avvia direttamente la modalità scelta",
     )
     parser.add_argument(
@@ -114,13 +115,14 @@ def choose_mode() -> str | None:
     """Simple keyboard/mouse menu shown before the clean camera feed."""
     title = "Scegli effetto"
     selected = [None]
-    window = np.zeros((420, 700, 3), dtype=np.uint8)
+    window = np.zeros((560, 700, 3), dtype=np.uint8)
     window[:] = (26, 29, 34)
     cv2.putText(window, "SCEGLI IL TUO VANISH", (68, 88),
                 cv2.FONT_HERSHEY_SIMPLEX, 0.85, (236, 239, 242), 2, cv2.LINE_AA)
     buttons = (
         ("normal", "1  NORMAL VANISH", "Segno a V  /  dissolvenza", 140),
-        ("naruto", "2  NARUTO VANISH", "Mani unite  /  tronco e fumo", 260),
+        ("particles", "2  PARTICLES", "Segno a V  /  frammenti al vento", 260),
+        ("naruto", "3  NARUTO VANISH", "Mani unite  /  tronco e fumo", 380),
     )
     for mode, heading, detail, top in buttons:
         cv2.rectangle(window, (65, top), (635, top + 94), (48, 54, 62), -1, cv2.LINE_AA)
@@ -392,6 +394,39 @@ def apply_dissolve(
     canvas = background.copy()
     canvas[area] = result
     return canvas
+
+
+def make_particle_points(frame: np.ndarray, mask: np.ndarray, limit: int = 2600):
+    ys, xs = np.where(mask > 0.38)
+    if len(xs) == 0:
+        return None
+    rng = np.random.default_rng(1701)
+    if len(xs) > limit:
+        selected = rng.choice(len(xs), size=limit, replace=False)
+        xs, ys = xs[selected], ys[selected]
+    colors = frame[ys, xs].copy()
+    drift = rng.uniform(0.55, 1.45, size=len(xs)).astype(np.float32)
+    phase = rng.uniform(0.0, np.pi * 2.0, size=len(xs)).astype(np.float32)
+    return xs.astype(np.float32), ys.astype(np.float32), colors, drift + phase * 0.0
+
+
+def apply_particles(background: np.ndarray, points, progress: float) -> np.ndarray:
+    output = background.copy()
+    if points is None:
+        return output
+    xs, ys, colors, drift = points
+    height, width = output.shape[:2]
+    center_x = width * 0.5
+    for index in range(len(xs)):
+        direction = -1.0 if index % 2 else 1.0
+        x = int(xs[index] + direction * (18.0 + (xs[index] - center_x) * 0.42) * progress * drift[index])
+        y = int(ys[index] + np.sin(index * 0.31) * 18.0 * progress)
+        if 0 <= x < width and 0 <= y < height:
+            alpha = max(0.0, 1.0 - progress * 1.15)
+            color = tuple(int(channel * alpha) for channel in colors[index])
+            radius = 1 + (index % 3)
+            cv2.circle(output, (x, y), radius, color, -1, cv2.LINE_AA)
+    return output
 
 
 def victory_landmark_score(points: np.ndarray) -> float:
@@ -692,6 +727,7 @@ def run_camera(args: argparse.Namespace, resources: ExitStack, mode: str) -> int
     log_anchor: tuple[int, int, int] | None = None
     log_cache: dict[int, np.ndarray] = {}
     vanished_frame: np.ndarray | None = None
+    particle_points: tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray] | None = None
     virtual_camera = None
     virtual_camera_initialized = False
     calibration_remaining = None
@@ -715,7 +751,7 @@ def run_camera(args: argparse.Namespace, resources: ExitStack, mode: str) -> int
                 virtual_camera_initialized = True
                 if virtual_camera is not None:
                     resources.callback(virtual_camera.close)
-            if mode == "normal" and (dissolve_field is None or dissolve_field.shape != (height, width)):
+            if mode in ("normal", "particles") and (dissolve_field is None or dissolve_field.shape != (height, width)):
                 dissolve_field, sparkle_noise = make_dissolve_fields(height, width)
             now = time.perf_counter()
 
@@ -747,12 +783,33 @@ def run_camera(args: argparse.Namespace, resources: ExitStack, mode: str) -> int
                 display = camera_frame
 
             elif state.phase == "vanished":
+                if mode in ("normal", "particles") and now - state.last_gesture_check >= GESTURE_INTERVAL_SECONDS:
+                    state.last_gesture_check = now
+                    rgb = cv2.cvtColor(camera_frame, cv2.COLOR_BGR2RGB)
+                    mp_image = mp.Image(image_format=mp.ImageFormat.SRGB, data=rgb)
+                    name, score = recognize_gesture(recognizer, mp_image, elapsed_ms)
+                    if name == "Victory" and score >= 0.62:
+                        state.phase = "reappearing"
+                        state.vanish_started = now
+                        last_mask = None
+                        last_mask_at = float("-inf")
                 if vanished_frame is None:
                     vanished_frame = background.copy()
                     if mode == "naruto" and log_anchor is not None:
                         overlay_log(vanished_frame, log_sprite, landed_log_anchor(log_anchor, height),
                                     cache=log_cache)
                 display = vanished_frame
+
+            elif state.phase == "reappearing":
+                if mp_image is None:
+                    rgb = cv2.cvtColor(camera_frame, cv2.COLOR_BGR2RGB)
+                    mp_image = mp.Image(image_format=mp.ImageFormat.SRGB, data=rgb)
+                mask = person_mask(segmenter, mp_image, elapsed_ms, width, height)
+                progress = min(1.0, (now - (state.vanish_started or now)) / VANISH_SECONDS)
+                display = alpha_composite(camera_frame, background, mask * progress)
+                if progress >= 1.0:
+                    state.phase = "ready"
+                    vanished_frame = None
 
             else:
                 mask = last_mask
@@ -799,6 +856,8 @@ def run_camera(args: argparse.Namespace, resources: ExitStack, mode: str) -> int
                         last_mask_at = now
                     if mode == "naruto" and log_anchor is None:
                         log_anchor = substitution_anchor(mask)
+                    if mode == "particles" and particle_points is None:
+                        particle_points = make_particle_points(camera_frame, mask)
 
                 if mode == "naruto" and state.phase == "naruto_vanishing":
                     age = max(0.04, time.perf_counter() - state.vanish_started)
@@ -813,14 +872,16 @@ def run_camera(args: argparse.Namespace, resources: ExitStack, mode: str) -> int
                 else:
                     progress = 0.0
                     if state.phase == "vanishing" and state.vanish_started is not None:
-                        progress = min(
-                            1.0, (time.perf_counter() - state.vanish_started) / VANISH_SECONDS
-                        )
+                        duration = PARTICLES_SECONDS if mode == "particles" else VANISH_SECONDS
+                        progress = min(1.0, (time.perf_counter() - state.vanish_started) / duration)
                         if progress >= 1.0:
                             state.phase = "vanished"
-                    display = apply_dissolve(
-                        camera_frame, background, mask, progress, dissolve_field, sparkle_noise
-                    )
+                    if mode == "particles":
+                        display = apply_particles(background, particle_points, progress)
+                    else:
+                        display = apply_dissolve(
+                            camera_frame, background, mask, progress, dissolve_field, sparkle_noise
+                        )
                     if state.phase == "vanished":
                         vanished_frame = display
 
@@ -839,6 +900,7 @@ def run_camera(args: argparse.Namespace, resources: ExitStack, mode: str) -> int
                 last_mask = None
                 last_mask_at = float("-inf")
                 vanished_frame = None
+                particle_points = None
                 background_samples.clear()
                 calibration_remaining = None
                 print("[Webcam] Esci dall'inquadratura per 4 secondi: acquisisco il nuovo sfondo.")
@@ -847,6 +909,7 @@ def run_camera(args: argparse.Namespace, resources: ExitStack, mode: str) -> int
                     state.phase = "ready"
                     state.vanish_started = None
                     vanished_frame = None
+                    particle_points = None
                     log_anchor = None
                     last_mask = None
                     last_mask_at = float("-inf")
@@ -856,6 +919,7 @@ def run_camera(args: argparse.Namespace, resources: ExitStack, mode: str) -> int
                 if mode == "naruto":
                     vanish_sound.play()
                     log_anchor = None
+                particle_points = None
                 vanished_frame = None
             elif key == ord("f"):
                 state.fullscreen = not state.fullscreen
